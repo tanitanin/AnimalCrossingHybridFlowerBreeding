@@ -16,39 +16,30 @@ using byte = unsigned char;
 // 種,白,黄,赤,明,色
 struct flower_t {
     bool is_seed = false;
-    union {
-        byte gene;
-        struct {
-            byte white  : 2;
-            byte yellow : 2;
-            byte red    : 2;
-            byte brightness : 2;
-        };
-    };
+    std::string white;
+    std::string yellow;
+    std::string red;
+    std::string brightness;
     std::string color;
+    std::string gene() {
+        return white + yellow + red + brightness;
+    }
 };
 
 bool operator==(flower_t a, flower_t b) {
-    return a.gene == b.gene;
+    return a.gene() == b.gene();
 }
 
 bool operator<(flower_t a, flower_t b) {
-    return a.gene < b.gene;
+    return a.gene() < b.gene();
 }
 
 std::string to_string(flower_t f) {
     std::stringstream ss;
     
     f.is_seed ? ss << "(S) " : ss << "    ";
-    ss << (f.white == 0 ? "00" : f.white == 1 ? "01" : "11");
-    ss << "-";
-    ss << (f.yellow == 0 ? "00" : f.yellow == 1 ? "01" : "11");
-    ss << "-";
-    ss << (f.red == 0 ? "00" : f.red == 1 ? "01" : "11");
-    ss << "-";
-    ss << (f.brightness == 0 ? "00" : f.brightness == 1 ? "01" : "11");
-    ss << " ";
-    ss << "(" << f.color << ")";
+    ss << f.white << "-" << f.yellow << "-" << f.red << "-" << f.brightness;
+    ss << " (" << f.color << ")";
     ss << std::string(8 - f.color.length(), ' ');
 
     return ss.str();
@@ -62,41 +53,89 @@ struct crossing_t {
     double propability;
 };
 
-std::vector<byte> cross(byte a, byte b) {
-    std::set<byte> pos_a; pos_a.insert(a); pos_a.insert(a == 0b01 ? 0b10 : a);
-    std::set<byte> pos_b; pos_b.insert(b); pos_b.insert(b == 0b01 ? 0b10 : b);
-    std::vector<byte> pos_ab;
-    for (byte aa : pos_a) {
-        byte xa = aa & 0b10, ya = aa & 0b01;
-        for (byte bb : pos_b) {
-            byte xb = bb & 0b10, yb = bb & 0b01;
-            pos_ab.push_back(xa | yb);
-            pos_ab.push_back(ya | xb);
+bool operator==(crossing_t a, crossing_t b) {
+    std::string aa = a.a.gene() + a.b.gene() + a.hybrid.gene();
+    std::string bb = b.a.gene() + b.b.gene() + b.hybrid.gene();
+    return aa == bb;
+}
+
+bool operator<(crossing_t a, crossing_t b) {
+    std::string aa = a.a.gene() + a.b.gene() + a.hybrid.gene();
+    std::string bb = b.a.gene() + b.b.gene() + b.hybrid.gene();
+    return aa < bb;
+}
+
+std::vector<std::string> cand(std::string a) {
+    std::vector<std::string> cs;
+    if (a.find('?') < a.length()) {
+        if (a == "0?") {
+            cs.push_back("00");
+            cs.push_back("00");
+            cs.push_back("01");
+            cs.push_back("10");
+        }
+        else if (a == "?1") {
+            cs.push_back("01");
+            cs.push_back("10");
+            cs.push_back("11");
+            cs.push_back("11");
+        }
+        else if (a == "??") {
+            cs.push_back("00");
+            cs.push_back("01");
+            cs.push_back("10");
+            cs.push_back("11");
         }
     }
-    std::vector<byte> pos;
-    for (byte xy : pos_ab) {
-        pos.push_back(xy == 0b10 ? 0b01 : xy);
+    else {
+        if (a == "01") {
+            cs.push_back("01");
+            cs.push_back("10");
+        }
+        else {
+            cs.push_back(a);
+        }
+    }
+    return cs;
+}
+
+std::vector<std::string> cross(std::string a, std::string b) {
+    std::set<std::string> pos_a, pos_b;
+    for (auto c : cand(a)) pos_a.insert(c);
+    for (auto c : cand(b)) pos_b.insert(c);
+    std::vector<std::string> pos_ab;
+    for (auto aa : pos_a) {
+        for (auto bb : pos_b) {
+            std::string ab = "??", ba = "??";
+            ab[0] = aa[0]; ab[1] = bb[1];
+            ba[0] = bb[0]; ba[1] = aa[1];
+            pos_ab.push_back(ab);
+            pos_ab.push_back(ba);
+        }
+    }
+    std::vector<std::string> pos;
+    for (auto xy : pos_ab) {
+        pos.push_back(xy == "10" ? "01" : xy);
     }
     return pos;
 }
 
-std::vector<flower_t> cross(const flower_t &a, const flower_t &b, const std::map<byte, flower_t> &gene_map) {
-    std::vector<byte> pos_w = cross(a.white, b.white);
-    std::vector<byte> pos_y = cross(a.yellow, b.yellow);
-    std::vector<byte> pos_r = cross(a.red, b.red);
-    std::vector<byte> pos_b = cross(a.brightness, b.brightness);
+std::vector<flower_t> cross(const flower_t &a, const flower_t &b, const std::map<std::string, flower_t> &gene_map) {
+    std::vector<std::string> pos_w = cross(a.white, b.white);
+    std::vector<std::string> pos_y = cross(a.yellow, b.yellow);
+    std::vector<std::string> pos_r = cross(a.red, b.red);
+    std::vector<std::string> pos_b = cross(a.brightness, b.brightness);
     std::vector<flower_t> pos;
-    for (byte w : pos_w) {
-        for (byte y : pos_y) {
-            for (byte r : pos_r) {
-                for (byte b : pos_b) {
+    for (auto w : pos_w) {
+        for (auto y : pos_y) {
+            for (auto r : pos_r) {
+                for (auto b : pos_b) {
                     flower_t f;
                     f.white = w;
                     f.yellow = y;
                     f.red = r;
                     f.brightness = b;
-                    auto itr = gene_map.find(f.gene);
+                    auto itr = gene_map.find(f.gene());
                     if (itr != gene_map.end()) {
                         pos.push_back(itr->second);
                     }
@@ -107,13 +146,46 @@ std::vector<flower_t> cross(const flower_t &a, const flower_t &b, const std::map
     return pos;
 }
 
+flower_t compose(std::vector<flower_t> flowers, std::string color) {
+    std::map<std::string, int> count_y, count_r, count_w, count_b;
+    for (auto f : flowers) {
+        count_y[f.yellow]++;
+        count_r[f.red]++;
+        count_w[f.white]++;
+        count_b[f.brightness]++;
+    }
+    flower_t f;
+    f.yellow = count_y.begin()->first;
+    for (auto kv : count_y) {
+        if (f.yellow[0] != kv.first[0]) f.yellow[0] = '?';
+        if (f.yellow[1] != kv.first[1]) f.yellow[1] = '?';
+    }
+    f.red = count_r.begin()->first;
+    for (auto kv : count_r) {
+        if (f.red[0] != kv.first[0]) f.red[0] = '?';
+        if (f.red[1] != kv.first[1]) f.red[1] = '?';
+    }
+    f.white = count_w.begin()->first;
+    for (auto kv : count_w) {
+        if (f.white[0] != kv.first[0]) f.white[0] = '?';
+        if (f.white[1] != kv.first[1]) f.white[1] = '?';
+    }
+    f.brightness = count_b.begin()->first;
+    for (auto kv : count_b) {
+        if (f.brightness[0] != kv.first[0]) f.brightness[0] = '?';
+        if (f.brightness[1] != kv.first[1]) f.brightness[1] = '?';
+    }
+    f.color = color;
+    return f;
+}
+
 void create_list(std::filesystem::path csv_path) {
 
     std::cout << "CSV: " <<  csv_path.filename() << std::endl;
 
     // read csv
     std::vector<flower_t> flowers;
-    std::map<byte, flower_t> flowers_index;
+    std::map<std::string, flower_t> flowers_index;
     std::ifstream ifs(csv_path);
     std::string line;
     while (std::getline(ifs, line)) {
@@ -126,13 +198,13 @@ void create_list(std::filesystem::path csv_path) {
         flower_t flower;
         if (cs[0] != "" && cs[0] != "1") continue;
         if (cs[0] == "1") flower.is_seed = true;
-        flower.yellow = (cs[1] == "00" ? 0b00 : cs[1] == "01" ? 0b01 : 0b11);
-        flower.red = (cs[2] == "00" ? 0b00 : cs[2] == "01" ? 0b01 : 0b11);
-        flower.white = (cs[3] == "00" ? 0b00 : cs[3] == "01" ? 0b01 : 0b11);
-        flower.brightness = (cs[4] == "00" ? 0b00 : cs[4] == "01" ? 0b01 : 0b11);
+        flower.yellow = cs[1];
+        flower.red = cs[2];
+        flower.white = cs[3];
+        flower.brightness = cs[4];
         flower.color = cs[5];
         flowers.push_back(flower);
-        flowers_index[flower.gene] = flower;
+        flowers_index[flower.gene()] = flower;
     }
 
     // cross breeding
@@ -164,15 +236,45 @@ void create_list(std::filesystem::path csv_path) {
                     if (f == fa || f == fb) continue;
                     if (color_count[f.color] == 1) {
                         crossing_t cr;
-                        cr.a = fa;
-                        cr.b = fb;
+                        cr.a = fa < fb ? fa : fb;
+                        cr.b = fa < fb ? fb : fa;
                         cr.hybrid = f;
                         cr.propability = prob[f];
                         if (origin.find(f) == origin.end()) {
-                            if (fa.gene <= fb.gene) {
+                            if (std::find(crossing_list.begin(), crossing_list.end(), cr) == crossing_list.end()) {
                                 crossing_list.push_back(cr);
                                 crossed.push_back(f);
+                                std::cout << to_string(cr.a) << " + " << to_string(cr.b);
+                                std::cout << " -> " << to_string(cr.hybrid);
+                                std::cout << " prob: " << cr.propability << std::endl;
                             }
+                        }
+                    }
+                }
+                for (auto itr : color_count) {
+                    if (itr.second <= 1) continue;
+                    if (itr.second > 2) continue;
+                    std::string color = itr.first;
+                    std::vector<flower_t> fs;
+                    double sum = 0.0f;
+                    for (auto itr : prob) {
+                        if (itr.first.color == color) {
+                            fs.push_back(itr.first);
+                            sum += itr.second;
+                        }
+                    }
+                    crossing_t cr;
+                    cr.a = fa < fb ? fa : fb;
+                    cr.b = fa < fb ? fb : fa;
+                    cr.hybrid = compose(fs, color);
+                    cr.propability = sum;
+                    if (origin.find(cr.hybrid) == origin.end()) {
+                        if (std::find(crossing_list.begin(), crossing_list.end(), cr) == crossing_list.end()) {
+                            crossing_list.push_back(cr);
+                            crossed.push_back(cr.hybrid);
+                            std::cout << to_string(cr.a) << " + " << to_string(cr.b);
+                            std::cout << " -> " << to_string(cr.hybrid);
+                            std::cout << " prob: " << cr.propability << std::endl;
                         }
                     }
                 }
@@ -185,11 +287,11 @@ void create_list(std::filesystem::path csv_path) {
         }
     }
 
-    for (auto cross : crossing_list) {
-        std::cout << to_string(cross.a) << " + " << to_string(cross.b);
-        std::cout << " -> " << to_string(cross.hybrid);
-        std::cout << " prob: " << cross.propability << std::endl;
-    }
+    //for (auto cross : crossing_list) {
+    //    std::cout << to_string(cross.a) << " + " << to_string(cross.b);
+    //    std::cout << " -> " << to_string(cross.hybrid);
+    //    std::cout << " prob: " << cross.propability << std::endl;
+    //}
     std::cout << std::endl;
 }
 
