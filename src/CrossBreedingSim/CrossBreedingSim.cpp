@@ -82,8 +82,10 @@ std::vector<std::string> cand(std::string a) {
         }
         else if (a == "??") {
             cs.push_back("00");
+            cs.push_back("00");
             cs.push_back("01");
             cs.push_back("10");
+            cs.push_back("11");
             cs.push_back("11");
         }
     }
@@ -240,7 +242,7 @@ void create_list(std::filesystem::path csv_path) {
                         cr.b = fa < fb ? fb : fa;
                         cr.hybrid = f;
                         cr.propability = prob[f];
-                        if (origin.find(f) == origin.end()) {
+                        //if (origin.find(f) == origin.end()) {
                             if (std::find(crossing_list.begin(), crossing_list.end(), cr) == crossing_list.end()) {
                                 crossing_list.push_back(cr);
                                 crossed.push_back(f);
@@ -248,7 +250,7 @@ void create_list(std::filesystem::path csv_path) {
                                 std::cout << " -> " << to_string(cr.hybrid);
                                 std::cout << " prob: " << cr.propability << std::endl;
                             }
-                        }
+                        //}
                     }
                 }
                 for (auto itr : color_count) {
@@ -268,7 +270,7 @@ void create_list(std::filesystem::path csv_path) {
                     cr.b = fa < fb ? fb : fa;
                     cr.hybrid = compose(fs, color);
                     cr.propability = sum;
-                    if (origin.find(cr.hybrid) == origin.end()) {
+                    //if (origin.find(cr.hybrid) == origin.end()) {
                         if (std::find(crossing_list.begin(), crossing_list.end(), cr) == crossing_list.end()) {
                             crossing_list.push_back(cr);
                             crossed.push_back(cr.hybrid);
@@ -276,7 +278,7 @@ void create_list(std::filesystem::path csv_path) {
                             std::cout << " -> " << to_string(cr.hybrid);
                             std::cout << " prob: " << cr.propability << std::endl;
                         }
-                    }
+                    //}
                 }
             }
         }
