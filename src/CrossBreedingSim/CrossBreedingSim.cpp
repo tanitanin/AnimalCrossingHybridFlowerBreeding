@@ -265,6 +265,10 @@ void create_list(std::filesystem::path csv_path) {
                             sum += itr.second;
                         }
                     }
+                    // cut
+                    if (sum < 0.1f) {
+                        continue;
+                    }
                     crossing_t cr;
                     cr.a = fa < fb ? fa : fb;
                     cr.b = fa < fb ? fb : fa;
